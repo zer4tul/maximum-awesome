@@ -19,36 +19,48 @@ endif
 " ensure ftdetect et al work by including this after the Vundle stuff
 filetype plugin indent on
 
-set autoindent
 set autoread                                                 " reload files when changed on disk, i.e. via `git checkout`
 set backspace=2                                              " Fix broken backspace in some setups
 set backupcopy=yes                                           " see :help crontab
-set clipboard=unnamed                                        " yank and paste with the system clipboard
 set directory-=.                                             " don't store swapfiles in the current directory
 set encoding=utf-8
-set expandtab                                                " expand tabs to spaces
 set ignorecase                                               " case-insensitive search
 set incsearch                                                " search as you type
 set laststatus=2                                             " always show statusline
 set list                                                     " show trailing whitespace
-set listchars=tab:▸\ ,trail:▫
+set listchars=tab:▸\ ,trail:▫,extends:#,nbsp:.
 set number                                                   " show line numbers
 set ruler                                                    " show where you are
 set scrolloff=3                                              " show context above/below cursorline
-set shiftwidth=2                                             " normal mode indentation commands use 2 spaces
 set showcmd
 set smartcase                                                " case-sensitive search if any caps
-set softtabstop=2                                            " insert mode tab and backspace use 2 spaces
-set tabstop=8                                                " actual tabs occupy 8 characters
 set wildignore=log/**,node_modules/**,target/**,tmp/**,*.rbc
 set wildmenu                                                 " show a navigable menu for tab completion
 set wildmode=longest,list,full
+set viewoptions=folds,options,cursor,unix,slash              " Better Unix / Windows compatibility
+set history=1000                                             " Store a ton of history (default is 20)
+set virtualedit=onemore                                      " Allow for cursor beyond last character
+set showmatch                                                " Show matching brackets/parenthesis
+set incsearch                                                " Find as you type search
+"set hlsearch                                                 " Highlight search terms
 
 " Enable basic mouse behavior such as resizing buffers.
 set mouse=a
 if exists('$TMUX')  " Support resizing in tmux
   set ttymouse=xterm2
 endif
+
+
+" Formatting
+set wrap                        " wrap long lines
+set autoindent                  " Indent at the same level of the previous line
+set shiftwidth=4                " Use indents of 4 spaces
+set expandtab                   " Tabs are spaces, not tabs
+set tabstop=8                   " actual tabs occupy 8 characters ( VIM's default is 8 )
+set softtabstop=4               " Let backspace delete indent
+set nojoinspaces                " Prevents inserting two spaces after punctuation on a join (J)
+set splitright                  " Puts new vsplit windows to the right of the current
+set splitbelow                  " Puts new split windows to the bottom of the current
 
 " keyboard shortcuts
 let mapleader = ','
@@ -86,6 +98,7 @@ if executable('ag')
   let g:ctrlp_user_command = 'ag %s -l --nocolor -g ""'
 endif
 
+" Filetype settings
 " fdoc is yaml
 autocmd BufRead,BufNewFile *.fdoc set filetype=yaml
 " md is markdown
@@ -101,6 +114,17 @@ autocmd User Rails silent! Rnavcommand stepdefinition features/step_definitions 
 " automatically rebalance windows on vim resize
 autocmd VimResized * :wincmd =
 
+autocmd BufNewFile,BufRead *.html.twig set filetype=html.twig
+autocmd FileType haskell,puppet,ruby,yml setlocal expandtab shiftwidth=2 softtabstop=2
+" preceding line best in a plugin but here for now.
+
+autocmd BufNewFile,BufRead *.coffee set filetype=coffee
+
+" Workaround vim-commentary for Haskell
+autocmd FileType haskell setlocal commentstring=--\ %s
+" Workaround broken colour highlighting in Haskell
+autocmd FileType haskell,rust setlocal nospell
+
 " Fix Cursor in TMUX
 if exists('$TMUX')
   let &t_SI = "\<Esc>Ptmux;\<Esc>\<Esc>]50;CursorShape=1\x7\<Esc>\\"
@@ -112,6 +136,15 @@ endif
 
 " Don't copy the contents of an overwritten selection.
 vnoremap p "_dP
+
+" Clipboard settings
+    if has('clipboard')
+        if has('unnamedplus')  " When possible use + register for copy-paste
+            set clipboard=unnamed,unnamedplus
+        else         " On mac and Windows, use * register for copy-paste
+            set clipboard=unnamed
+        endif
+    endif
 
 " Go crazy!
 if filereadable(expand("~/.vimrc.local"))
@@ -126,3 +159,37 @@ if filereadable(expand("~/.vimrc.local"))
   " noremap! jj <ESC>
   source ~/.vimrc.local
 endif
+
+if filereadable(expand("~/.vimrc.plugins"))
+  " In your .vimrc.local, you might like:
+  "
+  " set autowrite
+  " set nocursorline
+  " set nowritebackup
+  " set whichwrap+=<,>,h,l,[,] " Wrap arrow keys between lines
+  "
+  " autocmd! bufwritepost .vimrc source ~/.vimrc
+  " noremap! jj <ESC>
+  source ~/.vimrc.plugins
+elseif filereadable(expand("vimrc.plugins"))
+  source vimrc.plugins
+endif
+
+" Restore cursor position when reopen a file
+" http://vim.wikia.com/wiki/Restore_cursor_to_file_position_in_previous_editing_session
+    " Restore cursor to file position in previous editing session
+    " To disable this, add the following to your .vimrc.local file:
+    "   let g:max_no_restore_cursor = 1
+    if !exists('g:max_no_restore_cursor')
+        function! ResCur()
+            if line("'\"") <= line("$")
+                normal! g`"
+                return 1
+            endif
+        endfunction
+
+        augroup resCur
+            autocmd!
+            autocmd BufWinEnter * call ResCur()
+        augroup END
+    endif

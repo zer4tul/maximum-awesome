@@ -1,33 +1,127 @@
-set nocursorline " don't highlight current line
+" General
+" Enable wrap
+set wrap
+" Multi-encoding Setting
+" Auto detect Asia language environment. your vim should be compiled with multi_byte option
+if has("multi_byte")
+  "set bomb
+  set fileencodings=ucs-bom,utf-8,cp936,big5,euc-jp,euc-kr,latin1
+  " CJK environment detection and corresponding setting
+  if v:lang =~ "^zh_CN"
+    " Use cp936 to support GBK, euc-cn == gb2312
+    set encoding=cp936
+    set termencoding=cp936
+    set fileencoding=cp936
+  elseif v:lang =~ "^zh_TW"
+    " cp950, big5 or euc-tw
+    " Are they equal to each other?
+    set encoding=big5
+    set termencoding=big5
+    set fileencoding=big5
+  elseif v:lang =~ "^ko"
+    " Copied from someone's dotfile, untested
+    set encoding=euc-kr
+    set termencoding=euc-kr
+    set fileencoding=euc-kr
+  elseif v:lang =~ "^ja_JP"
+    " Copied from someone's dotfile, untested
+    set encoding=euc-jp
+    set termencoding=euc-jp
+    set fileencoding=euc-jp
+  endif
+  " Detect UTF-8 locale, and replace CJK setting if needed
+  if v:lang =~ "utf8$" || v:lang =~ "UTF-8$"
+    set encoding=utf-8
+    set termencoding=utf-8
+    set fileencoding=utf-8
+  endif
+endif
+
+" Initialize directories
+function! InitializeDirectories()
+  let parent = $HOME
+  let prefix = 'vim'
+  let dir_list = {
+        \ 'backup': 'backupdir',
+        \ 'views': 'viewdir',
+        \ 'swap': 'directory' }
+
+  if has('persistent_undo')
+    let dir_list['undo'] = 'undodir'
+  endif
+
+  " To specify a different directory in which to place the vimbackup,
+  " vimviews, vimundo, and vimswap files/directories, add the following to
+  " your .vimrc.before.local file:
+  "   let g:consolidated_directory = <full path to desired directory>
+  "   eg: let g:consolidated_directory = $HOME . '/.vim/'
+  if exists('g:consolidated_directory')
+    let common_dir = g:consolidated_directory . prefix
+  else
+    let common_dir = parent . '/.' . prefix
+  endif
+
+  for [dirname, settingname] in items(dir_list)
+    let directory = common_dir . dirname . '/'
+    if exists("*mkdir")
+      if !isdirectory(directory)
+        call mkdir(directory)
+      endif
+    endif
+    if !isdirectory(directory)
+      echo "Warning: Unable to create backup directory: " . directory
+      echo "Try: mkdir -p " . directory
+    else
+      let directory = substitute(directory, " ", "\\\\ ", "g")
+      exec "set " . settingname . "=" . directory
+    endif
+  endfor
+endfunction
+call InitializeDirectories()
+
+" UI
+set cursorline " highlight current line
 
 " keyboard shortcuts
 inoremap jj <ESC>
 
-" highlight search
-"set hlsearch
-"nmap <leader>hl :let @/ = ""<CR>
 
 " gui settings
 if (&t_Co == 256 || has('gui_running'))
   if ($TERM_PROGRAM == 'iTerm.app')
-    colorscheme solarized
+    "colorscheme Tomorrow-Night-Eighties
+    colorscheme base16-tomorrow
   else
     colorscheme desert
   endif
 endif
 
-" Disambiguate ,a & ,t from the Align plugin, making them fast again.
-"
-" This section is here to prevent AlignMaps from adding a bunch of mappings
-" that interfere with the very-common ,a and ,t mappings. This will get run
-" at every startup to remove the AlignMaps for the *next* vim startup.
-"
-" If you do want the AlignMaps mappings, remove this section, remove
-" ~/.vim/bundle/Align, and re-run rake in maximum-awesome.
-function! s:RemoveConflictingAlignMaps()
-  if exists("g:loaded_AlignMapsPlugin")
-    AlignMapsClean
-  endif
-endfunction
-command! -nargs=0 RemoveConflictingAlignMaps call s:RemoveConflictingAlignMaps()
-silent! autocmd VimEnter * RemoveConflictingAlignMaps
+
+" Golang settings
+let g:tagbar_type_go = {
+      \ 'ctagstype' : 'go',
+      \ 'kinds'     : [
+      \ 'p:package',
+      \ 'i:imports:1',
+      \ 'c:constants',
+      \ 'v:variables',
+      \ 't:types',
+      \ 'n:interfaces',
+      \ 'w:fields',
+      \ 'e:embedded',
+      \ 'm:methods',
+      \ 'r:constructor',
+      \ 'f:functions'
+      \ ],
+      \ 'sro' : '.',
+      \ 'kind2scope' : {
+      \ 't' : 'ctype',
+      \ 'n' : 'ntype'
+      \ },
+      \ 'scope2kind' : {
+      \ 'ctype' : 't',
+      \ 'ntype' : 'n'
+      \ },
+      \ 'ctagsbin'  : 'gotags',
+      \ 'ctagsargs' : '-sort -silent'
+      \ }
